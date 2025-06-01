@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>egg timer</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000 url('background.png') center/cover no-repeat;
+      color: #fff;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100dvh;
+      margin: 0;
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    #timer {
+      font-size: 3.5rem;
+      margin: 1rem 0;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      font-size: 1rem;
+      padding: 0.8rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+      color: #000;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button:hover {
+      background: #ddd;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>egg timer ⏲️</h1>
+  <div id="timer">05:00</div>
+  <div class="buttons">
+    <button onclick="startTimer()">start</button>
+    <button onclick="resetTimer()">reset</button>
+  </div>
+
+  <audio id="alarm" src="alarm.wav" preload="auto"></audio>
+
+  <script>
+    let duration = 300;
+    let timer = duration;
+    let interval;
+
+    function updateDisplay() {
+      const minutes = String(Math.floor(timer / 60)).padStart(2, '0');
+      const seconds = String(timer % 60).padStart(2, '0');
+      document.getElementById('timer').textContent = `${minutes}:${seconds}`;
+    }
+
+    function startTimer() {
+      if (interval) return;
+      interval = setInterval(() => {
+        if (timer > 0) {
+          timer--;
+          updateDisplay();
+        } else {
+          clearInterval(interval);
+          interval = null;
+          document.getElementById('alarm').play();
+        }
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(interval);
+      interval = null;
+      timer = duration;
+      updateDisplay();
+    }
+
+    updateDisplay();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+  </script>
+
+</body>
+</html>
