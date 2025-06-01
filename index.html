@@ -2,110 +2,212 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>egg timer</title>
-  <link rel="manifest" href="manifest.json">
+  <title>egg timer!🍳</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    /* responsive tweaks */
+@media (max-width: 600px) {
+  body {
+    padding-bottom: 50px; /* smaller padding on bottom for mobiles */
+  }
 
-    body {
-      background: #000 url('background.png') center/cover no-repeat;
-      color: #fff;
-      font-family: monospace;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100dvh;
-      margin: 0;
-      padding: 2rem 1rem;
-      text-align: center;
-    }
+  h1 {
+    font-size: 2.2rem;
+    margin-top: 50px;
+    margin-bottom: 20px;
+  }
 
-    h1 {
-      font-size: 2.2rem;
-      margin-bottom: 1.5rem;
-    }
+  button {
+    font-size: 18px;
+    padding: 12px 24px;
+    min-width: 180px;
+    max-width: 90vw; /* allow buttons to scale on small screens */
+  }
 
-    #timer {
-      font-size: 3.5rem;
-      margin: 1rem 0;
-    }
+  #timerBarWrapper {
+    width: 95%; /* use almost full width on small screens */
+    max-width: none;
+    height: 24px;
+  }
 
-    .buttons {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+  #timerCountdown {
+    font-size: 1.2rem;
+  }
 
-    button {
-      font-size: 1rem;
-      padding: 0.8rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      background: #fff;
-      color: #000;
-      cursor: pointer;
-      transition: background 0.2s ease;
-    }
+  #donePopup {
+    width: 90vw;
+    max-width: 300px;
+    padding: 20px;
+  }
+}
 
-    button:hover {
-      background: #ddd;
-    }
   </style>
 </head>
 <body>
 
-  <h1>egg timer ⏲️</h1>
-  <div id="timer">05:00</div>
-  <div class="buttons">
-    <button onclick="startTimer()">start</button>
-    <button onclick="resetTimer()">reset</button>
+<h1>egg timer!🍳</h1>
+
+<div id="eggStyles">
+  <button data-time="180">ไข่ลวก</button>
+  <button data-time="420">ยางมะตูม</button>
+  <button data-time="540">เกือบสุก</button>
+  <button data-time="720">สุกมาก!</button>
+</div>
+<h2> disclamer: ใส่ไข่ตอนน้ำเดือดนร๊ ><</h2>
+
+<div id="timerInterface">
+  <div id="timerBarWrapper">
+    <div id="timerBar"></div>
   </div>
+  <div id="timerCountdown">0:00</div>
+  <div id="timerControls">
+    <button id="startBtn">start</button>
+    <button id="pauseBtn" disabled>pause</button>
+    <button id="restartBtn" disabled>restart</button>
+    <button id="backBtn">เปลี่ยนความสุก🥘</button>
+  </div>
+</div>
 
-  <audio id="alarm" src="alarm.wav" preload="auto"></audio>
+<button id="alarmCheckBtn" data-time="2">alarm check</button>
 
-  <script>
-    let duration = 300;
-    let timer = duration;
-    let interval;
+<audio id="alarmSound" src="alarm.wav" preload="auto"></audio>
 
-    function updateDisplay() {
-      const minutes = String(Math.floor(timer / 60)).padStart(2, '0');
-      const seconds = String(timer % 60).padStart(2, '0');
-      document.getElementById('timer').textContent = `${minutes}:${seconds}`;
-    }
+<div id="donePopup">
+  <h2>done!</h2>
+  <button id="stopAlarmBtn">stop</button>
+</div>
 
-    function startTimer() {
-      if (interval) return;
-      interval = setInterval(() => {
-        if (timer > 0) {
-          timer--;
-          updateDisplay();
-        } else {
-          clearInterval(interval);
-          interval = null;
-          document.getElementById('alarm').play();
+<script>
+  let countdown;
+  let time;
+  let initialTime;
+  let isPaused = false;
+
+  const eggStyles = document.getElementById('eggStyles');
+  const timerInterface = document.getElementById('timerInterface');
+  const timerBar = document.getElementById('timerBar');
+  const timerCountdown = document.getElementById('timerCountdown');
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const backBtn = document.getElementById('backBtn');
+  const alarmSound = document.getElementById('alarmSound');
+  const donePopup = document.getElementById('donePopup');
+  const stopAlarmBtn = document.getElementById('stopAlarmBtn');
+  const alarmCheckBtn = document.getElementById('alarmCheckBtn');
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function updateBar(percent) {
+    timerBar.style.width = `${percent}%`;
+  }
+
+  function updateCountdown() {
+    timerCountdown.textContent = formatTime(time);
+  }
+
+  function startTimer() {
+    if (countdown) clearInterval(countdown);
+    isPaused = false;
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    restartBtn.disabled = false;
+
+    updateBar(((initialTime - time) / initialTime) * 100);
+    updateCountdown();
+
+    countdown = setInterval(() => {
+      if (!isPaused) {
+        time--;
+        updateBar(((initialTime - time) / initialTime) * 100);
+        updateCountdown();
+
+        if (time <= 0) {
+          clearInterval(countdown);
+          updateBar(100);
+          updateCountdown();
+          alarmSound.play();
+          donePopup.style.display = 'block';
+          startBtn.disabled = false;
+          pauseBtn.disabled = true;
+          restartBtn.disabled = true;
         }
-      }, 1000);
-    }
+      }
+    }, 1000);
+  }
 
-    function resetTimer() {
-      clearInterval(interval);
-      interval = null;
-      timer = duration;
-      updateDisplay();
-    }
+  function pauseTimer() {
+    isPaused = !isPaused;
+    pauseBtn.textContent = isPaused ? 'resume' : 'pause';
+  }
 
-    updateDisplay();
+  function restartTimer() {
+    clearInterval(countdown);
+    time = initialTime;
+    updateBar(0);
+    updateCountdown();
+    isPaused = true;
+    pauseBtn.textContent = 'pause';
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    restartBtn.disabled = true;
+  }
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js');
+  function showTimerInterface(selectedTime) {
+    eggStyles.style.display = 'none';
+    timerInterface.style.display = 'block';
+    time = selectedTime;
+    initialTime = selectedTime;
+    updateBar(0);
+    updateCountdown();
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = 'pause';
+    restartBtn.disabled = true;
+  }
+
+  function backToEggStyles() {
+    if (countdown) clearInterval(countdown);
+    eggStyles.style.display = 'block';
+    timerInterface.style.display = 'none';
+    updateBar(0);
+    timerCountdown.textContent = '0:00';
+    time = 0;
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    restartBtn.disabled = true;
+  }
+
+  eggStyles.addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON') {
+      const selectedTime = parseInt(e.target.getAttribute('data-time'));
+      showTimerInterface(selectedTime);
+      startTimer();
     }
-  </script>
+  });
+
+  alarmCheckBtn.addEventListener('click', () => {
+    showTimerInterface(2);
+    startTimer();
+  });
+
+  startBtn.addEventListener('click', startTimer);
+  pauseBtn.addEventListener('click', pauseTimer);
+  restartBtn.addEventListener('click', restartTimer);
+  backBtn.addEventListener('click', backToEggStyles);
+
+  stopAlarmBtn.addEventListener('click', () => {
+    alarmSound.pause();
+    alarmSound.currentTime = 0;
+    donePopup.style.display = 'none';
+  });
+
+  updateBar(0);
+  timerCountdown.textContent = '0:00';
+</script>
 
 </body>
 </html>
